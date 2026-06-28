@@ -511,6 +511,7 @@ export class BattleScene extends Phaser.Scene {
       this.cancelMovePreview()
       this.hideActionButtons()
       unit.setPosition(dest, this.mapManager)
+      this.selectionManager.clearHighlights()
       this.selectionManager.phase = 'select_target'
       this.log(`confirm: phase→select_target, calling showAttackRange`)
       this.showAttackRange()
