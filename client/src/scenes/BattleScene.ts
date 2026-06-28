@@ -65,6 +65,7 @@ export class BattleScene extends Phaser.Scene {
   private btnCancelText!: Phaser.GameObjects.Text
   private targetHighlight: Phaser.GameObjects.Rectangle | null = null
   private movePreviewHighlight: Phaser.GameObjects.Rectangle | null = null
+  private unitInfoText!: Phaser.GameObjects.Text
   private logEl!: HTMLDivElement
 
   constructor() {
@@ -101,6 +102,11 @@ export class BattleScene extends Phaser.Scene {
     this.infoText = this.add.text(400, 580, '', {
       fontSize: '12px', color: '#aaaaaa', fontFamily: 'monospace',
     }).setOrigin(0.5, 1).setDepth(10)
+
+    this.unitInfoText = this.add.text(648, 8, '', {
+      fontSize: '11px', color: '#ffffff', fontFamily: 'monospace',
+      lineSpacing: 4,
+    }).setDepth(10)
 
     this.btnConfirm = this.createButton(310, 565, 100, 28, '确认移动', 0x44aa44, () => this.onBtnConfirm())
     this.btnCancel = this.createButton(430, 565, 100, 28, '取消移动', 0x666666, () => this.onBtnCancel())
@@ -171,7 +177,11 @@ export class BattleScene extends Phaser.Scene {
           this.selectionManager.onUnitClicked(clicked, this.occupiedPositions)
           this.showAttackRangeTiles(clicked.pos, clicked.unit.attackRange)
           this.showSkipMoveButton()
+          this.updateUnitInfo(clicked)
           this.infoText.setText('选择移动或按「不移动」跳过')
+        } else if (clicked?.unit.team === TEAM.ENEMY) {
+          this.log('idle: show enemy info')
+          this.updateUnitInfo(clicked)
         } else {
           this.log('idle: nothing actionable')
         }
@@ -187,6 +197,7 @@ export class BattleScene extends Phaser.Scene {
           this.enemySprites.forEach(e => e.highlightAsTarget(false))
           this.hideSkipMoveButton()
           this.selectionManager.resetSelection()
+          this.updateUnitInfo(null)
           this.infoText.setText('点击己方单位选择')
         } else if (isReachable && !this.allSprites.some(s => s.pos.col === pos.col && s.pos.row === pos.row && s.unit.hp > 0 && s !== sel)) {
           this.log('select_move: reachable tile → show preview')
@@ -197,8 +208,9 @@ export class BattleScene extends Phaser.Scene {
           this.showMoveButtons()
           this.hideSkipMoveButton()
           this.infoText.setText('确认移动位置')
-        } else if (this.intendedMovePos && clicked?.unit.team === TEAM.ENEMY) {
-          this.log('select_move: intended pos set, clicked enemy (noop branch)')
+        } else if (clicked?.unit.team === TEAM.ENEMY) {
+          this.log('select_move: show enemy info')
+          this.updateUnitInfo(clicked)
         } else {
           this.log('select_move: unhandled click')
         }
@@ -211,8 +223,10 @@ export class BattleScene extends Phaser.Scene {
             this.log('select_target: targetable enemy → select as target')
             this.selectedTarget = clicked
             this.highlightTarget(clicked)
+            this.updateUnitInfo(clicked)
           } else {
-            this.log('select_target: enemy not targetable')
+            this.log('select_target: enemy not targetable, show info')
+            this.updateUnitInfo(clicked)
           }
         } else if (clicked && clicked.unit.team === TEAM.PLAYER && clicked.unit.hp > 0) {
           this.log('select_target: click friendly → switch unit')
@@ -226,7 +240,8 @@ export class BattleScene extends Phaser.Scene {
           this.selectionManager.resetSelection()
           this.selectionManager.onUnitClicked(clicked, this.occupiedPositions)
           this.showAttackRangeTiles(clicked.pos, clicked.unit.attackRange)
-          this.infoText.setText('选择移动目标位置')
+          this.updateUnitInfo(clicked)
+          this.infoText.setText('选择移动或按「不移动」跳过')
         } else {
           this.log('select_target: nothing actionable')
         }
@@ -242,6 +257,7 @@ export class BattleScene extends Phaser.Scene {
       this.enemySprites.forEach(e => e.highlightAsTarget(false))
       this.hideSkipMoveButton()
       this.selectionManager.resetSelection()
+      this.updateUnitInfo(null)
       this.infoText.setText('点击己方单位选择')
     }
   }
@@ -337,6 +353,7 @@ export class BattleScene extends Phaser.Scene {
     this.turnManager.markActed(attacker.unit.id)
     this.enemySprites.forEach(e => e.highlightAsTarget(false))
     this.selectionManager.resetSelection()
+    this.updateUnitInfo(null)
     this.isExecuting = false
     this.log(`executeAttack END isExec=${this.isExecuting} phase=${this.selectionManager.phase}`)
 
@@ -358,6 +375,7 @@ export class BattleScene extends Phaser.Scene {
     this.turnManager.markActed(unitSprite.unit.id)
     this.enemySprites.forEach(e => e.highlightAsTarget(false))
     this.selectionManager.resetSelection()
+    this.updateUnitInfo(null)
     this.infoText.setText(`${unitSprite.unit.name} 待命`)
     await this.delay(200)
     this.isExecuting = false
@@ -532,6 +550,7 @@ export class BattleScene extends Phaser.Scene {
     this.enemySprites.forEach(e => e.highlightAsTarget(false))
     this.hideActionButtons()
     this.selectionManager.resetSelection()
+    this.updateUnitInfo(null)
     this.infoText.setText('点击己方单位选择')
   }
 
@@ -640,6 +659,23 @@ export class BattleScene extends Phaser.Scene {
     el.appendChild(line)
     el.scrollTop = el.scrollHeight
     if (el.children.length > 40) el.removeChild(el.firstChild!)
+  }
+
+  private updateUnitInfo(sprite: UnitSprite | null): void {
+    if (!sprite) { this.unitInfoText.setText(''); return }
+    const u = sprite.unit
+    const team = u.team === TEAM.PLAYER ? '玩家' : '敌方'
+    const isMagic = u.matk > u.attack
+    this.unitInfoText.setText(
+      `${u.name} Lv.${u.level}\n` +
+      `阵营: ${team}\n` +
+      `HP: ${u.hp}/${u.maxHp}\n` +
+      `攻: ${isMagic ? u.matk : u.attack} 防: ${isMagic ? u.mdef : u.defense}\n` +
+      `速: ${u.speed}  射程: ${u.attackRange}\n` +
+      `移动: ${u.moveRange}\n` +
+      `命中: ${u.hitRate}% 闪避: ${u.dodgeRate}%\n` +
+      `暴击: ${u.critRate}%`
+    )
   }
 
   private delay(ms: number): Promise<void> {
