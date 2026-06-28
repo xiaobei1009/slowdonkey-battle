@@ -63,6 +63,7 @@ export class BattleScene extends Phaser.Scene {
   private btnCancelText!: Phaser.GameObjects.Text
   private targetHighlight: Phaser.GameObjects.Rectangle | null = null
   private movePreviewHighlight: Phaser.GameObjects.Rectangle | null = null
+  private logEl!: HTMLDivElement
 
   constructor() {
     super({ key: 'BattleScene' })
@@ -106,6 +107,11 @@ export class BattleScene extends Phaser.Scene {
     this.btnConfirmText = this.btnConfirm.getAt(1) as Phaser.GameObjects.Text
     this.btnCancelText = this.btnCancel.getAt(1) as Phaser.GameObjects.Text
 
+    this.logEl = document.createElement('div')
+    this.logEl.style.cssText = 'position:fixed;bottom:0;right:0;width:420px;max-height:200px;overflow-y:auto;background:rgba(0,0,0,0.85);color:#0f0;font:11px monospace;padding:4px 6px;z-index:9999;white-space:pre-wrap'
+    document.body.appendChild(this.logEl)
+    this.log('游戏启动')
+
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onPointerDown(pointer))
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer))
 
@@ -113,6 +119,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private startPlayerTurn(): void {
+    this.log(`=== 玩家回合 ${this.turnManager.turnNumber} ===`)
     this.turnText.setText(`回合 ${this.turnManager.turnNumber} — 玩家行动`)
     this.infoText.setText('点击己方单位选择')
     this.selectionManager.setCursorVisible(true)
@@ -126,15 +133,27 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onPointerDown(pointer: Phaser.Input.Pointer): void {
-    if (this.isExecuting) return
-    if (this.turnManager.getCurrentTeam() !== TEAM.PLAYER) return
+    this.log(`pointerDown phase=${this.selectionManager.phase} isExec=${this.isExecuting} (${pointer.x},${pointer.y})`)
+    if (this.isExecuting) {
+      this.log('→ blocked by isExecuting')
+      return
+    }
+    if (this.turnManager.getCurrentTeam() !== TEAM.PLAYER) {
+      this.log('→ not player turn')
+      return
+    }
 
     const pos = this.mapManager.pixelToTile(pointer.x, pointer.y)
-    if (!this.mapManager.isWithinBounds(pos)) return
+    if (!this.mapManager.isWithinBounds(pos)) {
+      this.log('→ out of bounds')
+      return
+    }
 
     const clicked = this.allSprites.find(s => s.pos.col === pos.col && s.pos.row === pos.row && s.unit.hp > 0)
+    this.log(`clicked tile=(${pos.col},${pos.row}) unit=${clicked?.unit.id ?? 'none'}`)
 
     if (pointer.rightButtonDown()) {
+      this.log('→ right click')
       this.handleRightClick()
       return
     }
@@ -142,21 +161,27 @@ export class BattleScene extends Phaser.Scene {
     switch (this.selectionManager.phase) {
       case 'idle':
         if (clicked && clicked.unit.team === TEAM.PLAYER) {
+          this.log('idle: select player unit')
           this.selectionManager.onUnitClicked(clicked, this.occupiedPositions)
           this.showAttackRangeTiles(clicked.pos, clicked.unit.attackRange)
           this.infoText.setText('选择移动目标位置')
+        } else {
+          this.log('idle: nothing actionable')
         }
         break
       case 'select_move': {
         const sel = this.selectionManager.selectedUnit!
+        if (!sel) { this.log('select_move: no selectedUnit!'); break }
         const isReachable = this.selectionManager.reachableTiles.some(t => t.col === pos.col && t.row === pos.row)
 
         if (clicked?.unit.id === sel.unit.id) {
+          this.log('select_move: click self → deselect')
           this.cancelMovePreview()
           this.enemySprites.forEach(e => e.highlightAsTarget(false))
           this.selectionManager.resetSelection()
           this.infoText.setText('点击己方单位选择')
         } else if (isReachable && !this.allSprites.some(s => s.pos.col === pos.col && s.pos.row === pos.row && s.unit.hp > 0 && s !== sel)) {
+          this.log('select_move: reachable tile → show preview')
           this.intendedMovePos = { ...pos }
           this.showMovePreview(pos)
           this.selectionManager.clearHighlights()
@@ -164,16 +189,24 @@ export class BattleScene extends Phaser.Scene {
           this.showMoveButtons()
           this.infoText.setText('确认移动位置')
         } else if (this.intendedMovePos && clicked?.unit.team === TEAM.ENEMY) {
+          this.log('select_move: intended pos set, clicked enemy (noop branch)')
+        } else {
+          this.log('select_move: unhandled click')
         }
         break
       }
-      case 'select_target':
+      case 'select_target': {
+        this.log(`select_target: clicked=${clicked?.unit.id ?? 'none'}, team=${clicked?.unit.team ?? 'none'}`)
         if (clicked && clicked.unit.team === TEAM.ENEMY) {
           if (this.isTargetable(clicked)) {
+            this.log('select_target: targetable enemy → select as target')
             this.selectedTarget = clicked
             this.highlightTarget(clicked)
+          } else {
+            this.log('select_target: enemy not targetable')
           }
         } else if (clicked && clicked.unit.team === TEAM.PLAYER && clicked.unit.hp > 0) {
+          this.log('select_target: click friendly → switch unit')
           const oldUnit = this.selectionManager.selectedUnit
           this.hideActionButtons()
           this.enemySprites.forEach(e => e.highlightAsTarget(false))
@@ -185,8 +218,11 @@ export class BattleScene extends Phaser.Scene {
           this.selectionManager.onUnitClicked(clicked, this.occupiedPositions)
           this.showAttackRangeTiles(clicked.pos, clicked.unit.attackRange)
           this.infoText.setText('选择移动目标位置')
+        } else {
+          this.log('select_target: nothing actionable')
         }
         break
+      }
     }
   }
 
@@ -230,6 +266,8 @@ export class BattleScene extends Phaser.Scene {
 
   private showAttackRange(): void {
     const selected = this.selectionManager.selectedUnit!
+    if (!selected) { this.log('showAttackRange: no selectedUnit'); return }
+    this.log(`showAttackRange: ${selected.unit.id} at (${selected.pos.col},${selected.pos.row})`)
     this.showAttackRangeTiles(selected.pos, selected.unit.attackRange)
 
     const enemies = this.enemySprites.filter(e => e.unit.hp > 0)
@@ -237,11 +275,13 @@ export class BattleScene extends Phaser.Scene {
       selected.pos, selected.unit.attackRange,
       enemies.map(e => ({ unit: e.unit, pos: e.pos }))
     )
+    this.log(`showAttackRange: ${attackable.length} targetable enemies`)
     if (attackable.length > 0) {
       this.infoText.setText('点击敌方选择目标，然后按「攻击」确认')
       this.showAttackButtons()
     } else {
       this.infoText.setText('无攻击目标，自动待命')
+      this.log('showAttackRange: no targets → executeWait')
       this.executeWait(selected)
     }
   }
@@ -253,6 +293,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async executeAttack(attacker: UnitSprite, defender: UnitSprite): Promise<void> {
+    this.log(`executeAttack START ${attacker.unit.id}→${defender.unit.id}`)
     this.isExecuting = true
     this.hideActionButtons()
     this.selectionManager.setCursorVisible(false)
@@ -287,6 +328,7 @@ export class BattleScene extends Phaser.Scene {
     this.enemySprites.forEach(e => e.highlightAsTarget(false))
     this.selectionManager.resetSelection()
     this.isExecuting = false
+    this.log(`executeAttack END isExec=${this.isExecuting} phase=${this.selectionManager.phase}`)
 
     if (this.checkWinCondition()) return
     this.updateOccupied()
@@ -300,6 +342,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private async executeWait(unitSprite: UnitSprite): Promise<void> {
+    this.log(`executeWait START ${unitSprite.unit.id}`)
     this.isExecuting = true
     this.hideActionButtons()
     this.turnManager.markActed(unitSprite.unit.id)
@@ -308,6 +351,7 @@ export class BattleScene extends Phaser.Scene {
     this.infoText.setText(`${unitSprite.unit.name} 待命`)
     await this.delay(200)
     this.isExecuting = false
+    this.log(`executeWait END isExec=${this.isExecuting} phase=${this.selectionManager.phase}`)
 
     if (this.turnManager.isTeamDone()) {
       this.startAITurn()
@@ -447,25 +491,34 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onBtnConfirm(): void {
+    this.log('onBtnConfirm')
     if (this.intendedMovePos) {
       const unit = this.selectionManager.selectedUnit
-      if (!unit) return
+      if (!unit) { this.log('confirm: no selectedUnit'); return }
+      const dest = { ...this.intendedMovePos }
+      this.log(`confirm: move ${unit.unit.id} from (${unit.pos.col},${unit.pos.row}) to (${dest.col},${dest.row})`)
       this.preMovePos = { ...unit.pos }
       this.cancelMovePreview()
       this.hideActionButtons()
-      unit.setPosition(this.intendedMovePos, this.mapManager)
+      unit.setPosition(dest, this.mapManager)
       this.selectionManager.phase = 'select_target'
+      this.log(`confirm: phase→select_target, calling showAttackRange`)
       this.showAttackRange()
     } else if (this.selectedTarget) {
+      this.log(`confirm: attack ${this.selectionManager.selectedUnit?.unit.id} → ${this.selectedTarget.unit.id}`)
       this.preMovePos = null
       this.hideActionButtons()
       this.executeAttack(this.selectionManager.selectedUnit!, this.selectedTarget)
       this.selectedTarget = null
+    } else {
+      this.log('confirm: nothing to confirm')
     }
   }
 
   private onBtnCancel(): void {
+    this.log('onBtnCancel')
     if (this.intendedMovePos) {
+      this.log('cancel: intendedMovePos → revert to move selection')
       this.cancelMovePreview()
       this.hideActionButtons()
       const unit = this.selectionManager.selectedUnit
@@ -477,8 +530,9 @@ export class BattleScene extends Phaser.Scene {
       }
       this.infoText.setText('选择移动目标位置')
     } else if (this.preMovePos) {
+      this.log('cancel: preMovePos → return to preMovePos')
       const unit = this.selectionManager.selectedUnit
-      if (!unit || !this.preMovePos) return
+      if (!unit || !this.preMovePos) { this.log('cancel: no unit or preMovePos'); return }
       this.selectedTarget = null
       this.hideActionButtons()
       this.enemySprites.forEach(e => e.highlightAsTarget(false))
@@ -489,6 +543,8 @@ export class BattleScene extends Phaser.Scene {
       this.selectionManager.showMoveRange(reachable)
       this.showAttackRangeTiles(unit.pos, unit.unit.attackRange)
       this.infoText.setText('选择移动目标位置')
+    } else {
+      this.log('cancel: nothing to cancel')
     }
   }
 
@@ -527,6 +583,15 @@ export class BattleScene extends Phaser.Scene {
       GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE,
       0xffff00, 0.35
     ).setStrokeStyle(2, 0xffff00, 0.9).setDepth(5)
+  }
+
+  private log(msg: string): void {
+    const el = this.logEl
+    const line = document.createElement('div')
+    line.textContent = msg
+    el.appendChild(line)
+    el.scrollTop = el.scrollHeight
+    if (el.children.length > 40) el.removeChild(el.firstChild!)
   }
 
   private delay(ms: number): Promise<void> {
