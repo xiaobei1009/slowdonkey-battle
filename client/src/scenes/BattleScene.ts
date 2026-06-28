@@ -172,21 +172,32 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  private getAttackRangeTiles(pos: Position, range: number): Position[] {
+    const tiles: Position[] = []
+    for (let dr = -range; dr <= range; dr++) {
+      for (let dc = -range; dc <= range; dc++) {
+        if (Math.abs(dr) + Math.abs(dc) > range) continue
+        const p: Position = { col: pos.col + dc, row: pos.row + dr }
+        if (this.mapManager.isWithinBounds(p)) tiles.push(p)
+      }
+    }
+    return tiles
+  }
+
   private showAttackRangeTiles(pos: Position, range: number): void {
     const enemies = this.enemySprites.filter(e => e.unit.hp > 0)
+    const attackRange = this.getAttackRangeTiles(pos, range)
     const attackable = this.battleSystem.getAttackableTargets(
       pos, range,
       enemies.map(e => ({ unit: e.unit, pos: e.pos }))
     )
+    this.selectionManager.showAttackRange(attackRange)
     this.enemySprites.forEach(e => e.highlightAsTarget(false))
-    if (attackable.length > 0) {
-      this.selectionManager.showAttackRange(attackable.map(a => a.pos))
-      enemies.forEach(e => {
-        if (attackable.some(a => a.unit.id === e.unit.id)) {
-          e.highlightAsTarget(true)
-        }
-      })
-    }
+    enemies.forEach(e => {
+      if (attackable.some(a => a.unit.id === e.unit.id)) {
+        e.highlightAsTarget(true)
+      }
+    })
   }
 
   private showAttackRange(): void {
