@@ -60,6 +60,7 @@ export class BattleScene extends Phaser.Scene {
   private btnConfirm!: Phaser.GameObjects.Container
   private btnCancel!: Phaser.GameObjects.Container
   private btnSkipMove!: Phaser.GameObjects.Container
+  private btnDeselect!: Phaser.GameObjects.Container
   private btnConfirmText!: Phaser.GameObjects.Text
   private btnCancelText!: Phaser.GameObjects.Text
   private targetHighlight: Phaser.GameObjects.Rectangle | null = null
@@ -104,9 +105,11 @@ export class BattleScene extends Phaser.Scene {
     this.btnConfirm = this.createButton(310, 565, 100, 28, '确认移动', 0x44aa44, () => this.onBtnConfirm())
     this.btnCancel = this.createButton(430, 565, 100, 28, '取消移动', 0x666666, () => this.onBtnCancel())
     this.btnSkipMove = this.createButton(190, 565, 100, 28, '不移动', 0x4488cc, () => this.onBtnSkipMove())
+    this.btnDeselect = this.createButton(70, 565, 100, 28, '取消选择', 0x666666, () => this.onBtnDeselect())
     this.btnConfirm.setVisible(false)
     this.btnCancel.setVisible(false)
     this.btnSkipMove.setVisible(false)
+    this.btnDeselect.setVisible(false)
     this.btnConfirmText = this.btnConfirm.getAt(1) as Phaser.GameObjects.Text
     this.btnCancelText = this.btnCancel.getAt(1) as Phaser.GameObjects.Text
 
@@ -522,6 +525,15 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  private onBtnDeselect(): void {
+    this.log('onBtnDeselect')
+    this.cancelMovePreview()
+    this.enemySprites.forEach(e => e.highlightAsTarget(false))
+    this.hideActionButtons()
+    this.selectionManager.resetSelection()
+    this.infoText.setText('点击己方单位选择')
+  }
+
   private onBtnSkipMove(): void {
     this.log('onBtnSkipMove')
     const unit = this.selectionManager.selectedUnit
@@ -590,16 +602,20 @@ export class BattleScene extends Phaser.Scene {
   private showSkipMoveButton(): void {
     this.btnSkipMove.setVisible(true)
     this.btnSkipMove.setDepth(20)
+    this.btnDeselect.setVisible(true)
+    this.btnDeselect.setDepth(20)
   }
 
   private hideSkipMoveButton(): void {
     this.btnSkipMove.setVisible(false)
+    this.btnDeselect.setVisible(false)
   }
 
   private hideActionButtons(): void {
     this.btnConfirm.setVisible(false)
     this.btnCancel.setVisible(false)
     this.btnSkipMove.setVisible(false)
+    this.btnDeselect.setVisible(false)
     if (this.targetHighlight) {
       this.targetHighlight.destroy()
       this.targetHighlight = null
