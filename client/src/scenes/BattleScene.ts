@@ -161,6 +161,8 @@ export class BattleScene extends Phaser.Scene {
         } else if (isReachable && !this.allSprites.some(s => s.pos.col === pos.col && s.pos.row === pos.row && s.unit.hp > 0 && s !== sel)) {
           this.intendedMovePos = { ...pos }
           this.showMovePreview(pos)
+          this.selectionManager.clearHighlights()
+          this.showAttackRangeTiles(pos, sel.unit.attackRange)
           this.showMoveButtons()
           this.infoText.setText('确认移动位置')
         } else if (this.intendedMovePos && clicked?.unit.team === TEAM.ENEMY) {
