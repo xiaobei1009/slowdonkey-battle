@@ -25,15 +25,15 @@ function createEnemyUnits(): UnitData[] {
 }
 
 const playerStartPositions: Position[] = [
-  { col: 1, row: 4 },
-  { col: 2, row: 7 },
-  { col: 1, row: 10 },
+  { col: 1, row: 3 },
+  { col: 1, row: 8 },
+  { col: 1, row: 13 },
 ]
 
 const enemyStartPositions: Position[] = [
-  { col: 23, row: 4 },
-  { col: 22, row: 7 },
-  { col: 23, row: 10 },
+  { col: 14, row: 3 },
+  { col: 14, row: 8 },
+  { col: 14, row: 13 },
 ]
 
 export class BattleScene extends Phaser.Scene {
@@ -95,22 +95,22 @@ export class BattleScene extends Phaser.Scene {
     this.allSprites = [...this.playerSprites, ...this.enemySprites]
     this.updateOccupied()
 
-    this.turnText = this.add.text(400, 8, '', {
-      fontSize: '16px', color: '#ffd700', fontFamily: 'monospace',
+    this.turnText = this.add.text(240, 4, '', {
+      fontSize: '14px', color: '#ffd700', fontFamily: 'monospace',
     }).setOrigin(0.5, 0).setDepth(10)
 
-    this.infoText = this.add.text(400, 590, '', {
-      fontSize: '12px', color: '#aaaaaa', fontFamily: 'monospace',
+    this.infoText = this.add.text(240, 752, '', {
+      fontSize: '11px', color: '#aaaaaa', fontFamily: 'monospace',
     }).setOrigin(0.5, 1).setDepth(10)
 
-    this.btnConfirm = this.createButton(310, 500, 100, 28, '确认移动', 0x44aa44, () => this.onBtnConfirm())
-    this.btnCancel = this.createButton(430, 500, 100, 28, '取消移动', 0x666666, () => this.onBtnCancel())
-    this.btnSkipMove = this.createButton(190, 500, 100, 28, '不移动', 0x4488cc, () => this.onBtnSkipMove())
-    this.btnDeselect = this.createButton(70, 500, 100, 28, '取消选择', 0x666666, () => this.onBtnDeselect())
+    this.btnDeselect = this.createButton(65, 500, 80, 28, '取消选', 0x666666, () => this.onBtnDeselect())
+    this.btnSkipMove = this.createButton(155, 500, 80, 28, '不移动', 0x4488cc, () => this.onBtnSkipMove())
+    this.btnConfirm = this.createButton(245, 500, 90, 28, '确认', 0x44aa44, () => this.onBtnConfirm())
+    this.btnCancel = this.createButton(345, 500, 80, 28, '取消', 0x666666, () => this.onBtnCancel())
 
-    this.unitInfoText = this.add.text(400, 540, '', {
-      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace',
-      lineSpacing: 5, align: 'center',
+    this.unitInfoText = this.add.text(240, 548, '', {
+      fontSize: '13px', color: '#ffffff', fontFamily: 'monospace',
+      lineSpacing: 4, align: 'center',
     }).setOrigin(0.5, 0).setDepth(10)
     this.btnConfirm.setVisible(false)
     this.btnCancel.setVisible(false)
@@ -491,7 +491,7 @@ export class BattleScene extends Phaser.Scene {
   private createButton(x: number, y: number, w: number, h: number, label: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
     const bg = this.add.rectangle(x, y, w, h, color, 0.9).setStrokeStyle(1, 0xffffff, 0.5)
     const text = this.add.text(x, y, label, {
-      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace',
+      fontSize: '12px', color: '#ffffff', fontFamily: 'monospace',
     }).setOrigin(0.5)
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerdown', onClick)
