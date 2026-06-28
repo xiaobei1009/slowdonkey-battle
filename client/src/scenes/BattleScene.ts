@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { UnitData, Position, BattleAction } from '@shared/types'
-import { GAME_CONFIG, TEAM } from '../config'
+import { GAME_CONFIG, TEAM, TERRAIN_COLORS } from '../config'
 import { MapManager } from '../systems/MapManager'
 import { TurnManager } from '../systems/TurnManager'
 import { BattleSystem } from '../systems/BattleSystem'
@@ -183,6 +183,7 @@ export class BattleScene extends Phaser.Scene {
           this.log('idle: show enemy info')
           this.updateUnitInfo(clicked)
         } else {
+          if (!clicked) this.showTerrainInfo(pos)
           this.log('idle: nothing actionable')
         }
         break
@@ -212,6 +213,7 @@ export class BattleScene extends Phaser.Scene {
           this.log('select_move: show enemy info')
           this.updateUnitInfo(clicked)
         } else {
+          if (!clicked) this.showTerrainInfo(pos)
           this.log('select_move: unhandled click')
         }
         break
@@ -243,6 +245,7 @@ export class BattleScene extends Phaser.Scene {
           this.updateUnitInfo(clicked)
           this.infoText.setText('选择移动或按「不移动」跳过')
         } else {
+          if (!clicked) this.showTerrainInfo(pos)
           this.log('select_target: nothing actionable')
         }
         break
@@ -659,6 +662,13 @@ export class BattleScene extends Phaser.Scene {
     el.appendChild(line)
     el.scrollTop = el.scrollHeight
     if (el.children.length > 40) el.removeChild(el.firstChild!)
+  }
+
+  private showTerrainInfo(pos: Position): void {
+    const tile = this.mapManager.getTile(pos)
+    if (!tile) return
+    const info = TERRAIN_COLORS[tile.terrain]
+    this.unitInfoText.setText(`[${info.label}]`)
   }
 
   private updateUnitInfo(sprite: UnitSprite | null): void {
