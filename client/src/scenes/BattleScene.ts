@@ -175,6 +175,18 @@ export class BattleScene extends Phaser.Scene {
             this.selectedTarget = clicked
             this.highlightTarget(clicked)
           }
+        } else if (clicked && clicked.unit.team === TEAM.PLAYER && clicked.unit.hp > 0) {
+          const oldUnit = this.selectionManager.selectedUnit
+          this.hideActionButtons()
+          this.enemySprites.forEach(e => e.highlightAsTarget(false))
+          if (oldUnit && this.preMovePos) {
+            oldUnit.setPosition(this.preMovePos, this.mapManager)
+            this.preMovePos = null
+          }
+          this.selectionManager.resetSelection()
+          this.selectionManager.onUnitClicked(clicked, this.occupiedPositions)
+          this.showAttackRangeTiles(clicked.pos, clicked.unit.attackRange)
+          this.infoText.setText('选择移动目标位置')
         }
         break
     }
