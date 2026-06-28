@@ -50,6 +50,12 @@ export class SelectionManager {
     }
   }
 
+  clearAttackRange(): void {
+    this.attackHighlights.forEach(h => h.destroy())
+    this.attackHighlights = []
+    this.attackableTiles = []
+  }
+
   showAttackRange(tiles: Position[]): void {
     this.attackableTiles = tiles
     for (const tile of tiles) {

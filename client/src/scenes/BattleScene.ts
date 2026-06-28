@@ -204,7 +204,7 @@ export class BattleScene extends Phaser.Scene {
           this.log('select_move: reachable tile → show preview')
           this.intendedMovePos = { ...pos }
           this.showMovePreview(pos)
-          this.selectionManager.clearHighlights()
+          this.selectionManager.clearAttackRange()
           this.showAttackRangeTiles(pos, sel.unit.attackRange)
           this.showMoveButtons()
           this.hideSkipMoveButton()
