@@ -59,6 +59,7 @@ export class BattleScene extends Phaser.Scene {
   private intendedMovePos: Position | null = null
   private btnConfirm!: Phaser.GameObjects.Container
   private btnCancel!: Phaser.GameObjects.Container
+  private btnSkipMove!: Phaser.GameObjects.Container
   private btnConfirmText!: Phaser.GameObjects.Text
   private btnCancelText!: Phaser.GameObjects.Text
   private targetHighlight: Phaser.GameObjects.Rectangle | null = null
@@ -102,8 +103,10 @@ export class BattleScene extends Phaser.Scene {
 
     this.btnConfirm = this.createButton(310, 565, 100, 28, '确认移动', 0x44aa44, () => this.onBtnConfirm())
     this.btnCancel = this.createButton(430, 565, 100, 28, '取消移动', 0x666666, () => this.onBtnCancel())
+    this.btnSkipMove = this.createButton(190, 565, 100, 28, '不移动', 0x4488cc, () => this.onBtnSkipMove())
     this.btnConfirm.setVisible(false)
     this.btnCancel.setVisible(false)
+    this.btnSkipMove.setVisible(false)
     this.btnConfirmText = this.btnConfirm.getAt(1) as Phaser.GameObjects.Text
     this.btnCancelText = this.btnCancel.getAt(1) as Phaser.GameObjects.Text
 
@@ -164,7 +167,8 @@ export class BattleScene extends Phaser.Scene {
           this.log('idle: select player unit')
           this.selectionManager.onUnitClicked(clicked, this.occupiedPositions)
           this.showAttackRangeTiles(clicked.pos, clicked.unit.attackRange)
-          this.infoText.setText('选择移动目标位置')
+          this.showSkipMoveButton()
+          this.infoText.setText('选择移动或按「不移动」跳过')
         } else {
           this.log('idle: nothing actionable')
         }
@@ -178,6 +182,7 @@ export class BattleScene extends Phaser.Scene {
           this.log('select_move: click self → deselect')
           this.cancelMovePreview()
           this.enemySprites.forEach(e => e.highlightAsTarget(false))
+          this.hideSkipMoveButton()
           this.selectionManager.resetSelection()
           this.infoText.setText('点击己方单位选择')
         } else if (isReachable && !this.allSprites.some(s => s.pos.col === pos.col && s.pos.row === pos.row && s.unit.hp > 0 && s !== sel)) {
@@ -187,6 +192,7 @@ export class BattleScene extends Phaser.Scene {
           this.selectionManager.clearHighlights()
           this.showAttackRangeTiles(pos, sel.unit.attackRange)
           this.showMoveButtons()
+          this.hideSkipMoveButton()
           this.infoText.setText('确认移动位置')
         } else if (this.intendedMovePos && clicked?.unit.team === TEAM.ENEMY) {
           this.log('select_move: intended pos set, clicked enemy (noop branch)')
@@ -231,6 +237,7 @@ export class BattleScene extends Phaser.Scene {
       this.onBtnCancel()
     } else if (this.selectionManager.phase === 'select_move') {
       this.enemySprites.forEach(e => e.highlightAsTarget(false))
+      this.hideSkipMoveButton()
       this.selectionManager.resetSelection()
       this.infoText.setText('点击己方单位选择')
     }
@@ -515,6 +522,18 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  private onBtnSkipMove(): void {
+    this.log('onBtnSkipMove')
+    const unit = this.selectionManager.selectedUnit
+    if (!unit) { this.log('skipMove: no selectedUnit'); return }
+    this.preMovePos = { ...unit.pos }
+    this.cancelMovePreview()
+    this.selectionManager.clearHighlights()
+    this.hideActionButtons()
+    this.selectionManager.phase = 'select_target'
+    this.showAttackRange()
+  }
+
   private onBtnCancel(): void {
     this.log('onBtnCancel')
     if (this.intendedMovePos) {
@@ -528,7 +547,8 @@ export class BattleScene extends Phaser.Scene {
         )
         this.showAttackRangeTiles(unit.pos, unit.unit.attackRange)
       }
-      this.infoText.setText('选择移动目标位置')
+      this.showSkipMoveButton()
+      this.infoText.setText('选择移动或按「不移动」跳过')
     } else if (this.preMovePos) {
       this.log('cancel: preMovePos → return to preMovePos')
       const unit = this.selectionManager.selectedUnit
@@ -542,7 +562,8 @@ export class BattleScene extends Phaser.Scene {
       const reachable = this.mapManager.getReachableTiles(unit.pos, unit.unit.moveRange, this.occupiedPositions)
       this.selectionManager.showMoveRange(reachable)
       this.showAttackRangeTiles(unit.pos, unit.unit.attackRange)
-      this.infoText.setText('选择移动目标位置')
+      this.showSkipMoveButton()
+      this.infoText.setText('选择移动或按「不移动」跳过')
     } else {
       this.log('cancel: nothing to cancel')
     }
@@ -566,9 +587,19 @@ export class BattleScene extends Phaser.Scene {
     this.btnCancel.setDepth(20)
   }
 
+  private showSkipMoveButton(): void {
+    this.btnSkipMove.setVisible(true)
+    this.btnSkipMove.setDepth(20)
+  }
+
+  private hideSkipMoveButton(): void {
+    this.btnSkipMove.setVisible(false)
+  }
+
   private hideActionButtons(): void {
     this.btnConfirm.setVisible(false)
     this.btnCancel.setVisible(false)
+    this.btnSkipMove.setVisible(false)
     if (this.targetHighlight) {
       this.targetHighlight.destroy()
       this.targetHighlight = null
