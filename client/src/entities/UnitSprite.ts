@@ -21,7 +21,7 @@ export class UnitSprite {
 
     const pixelPos = mapManager.tileToPixel(pos)
     const size = GAME_CONFIG.TILE_SIZE - 4
-    const color = unit.team === TEAM.PLAYER ? 0x4488ff : 0xff4444
+    const color = unit.team === TEAM.PLAYER ? 0x3a7bd5 : 0xb83030
 
     this.selectedIndicator = scene.add.rectangle(pixelPos.x, pixelPos.y, size + 4, size + 4, 0xffff00, 0.4)
     this.selectedIndicator.setVisible(false)
@@ -92,7 +92,7 @@ export class UnitSprite {
   flashDamage(): void {
     this.scene.tweens.add({
       targets: this.sprite,
-      fillColor: { from: 0xffffff, to: this.unit.team === TEAM.PLAYER ? 0x4488ff : 0xff4444 },
+      fillColor: { from: 0xffffff, to: this.unit.team === TEAM.PLAYER ? 0x3a7bd5 : 0xb83030 },
       duration: 150,
     })
   }

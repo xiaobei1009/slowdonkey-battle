@@ -43,8 +43,11 @@ export class MapManager {
         g.fillStyle(color, 1)
         g.fillRect(x, y, GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE)
 
-        g.lineStyle(1, 0x000000, 0.2)
+        g.lineStyle(1, 0x000000, 0.15)
         g.strokeRect(x, y, GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE)
+        g.lineStyle(2, 0x000000, 0.08)
+        g.lineBetween(x + 2, y + GAME_CONFIG.TILE_SIZE - 1, x + GAME_CONFIG.TILE_SIZE - 2, y + GAME_CONFIG.TILE_SIZE - 1)
+        g.lineBetween(x + GAME_CONFIG.TILE_SIZE - 1, y + 2, x + GAME_CONFIG.TILE_SIZE - 1, y + GAME_CONFIG.TILE_SIZE - 2)
       }
     }
   }

@@ -19,10 +19,10 @@ export const TERRAIN = {
 } as const
 
 export const TERRAIN_COLORS: Record<number, { fill: number; label: string }> = {
-  [TERRAIN.PLAIN]: { fill: 0x4a7c59, label: '平地' },
-  [TERRAIN.HIGH]: { fill: 0x8b7355, label: '高地' },
-  [TERRAIN.WATER]: { fill: 0x2d6da8, label: '水域' },
-  [TERRAIN.WALL]: { fill: 0x555555, label: '障碍物' },
+  [TERRAIN.PLAIN]: { fill: 0x6b8f5e, label: '平地' },
+  [TERRAIN.HIGH]: { fill: 0x9c8a6e, label: '高地' },
+  [TERRAIN.WATER]: { fill: 0x3a6a90, label: '水域' },
+  [TERRAIN.WALL]: { fill: 0x5a5a5a, label: '障碍物' },
 }
 
 export const TEAM = {

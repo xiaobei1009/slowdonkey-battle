@@ -7,7 +7,7 @@ const config: Phaser.Types.Core.GameConfig = {
   width: GAME_CONFIG.SCREEN_WIDTH,
   height: GAME_CONFIG.SCREEN_HEIGHT,
   pixelArt: true,
-  backgroundColor: '#1a1a2e',
+  backgroundColor: '#0f1218',
   scene: [BattleScene],
   scale: {
     mode: Phaser.Scale.FIT,
