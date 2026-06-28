@@ -99,19 +99,19 @@ export class BattleScene extends Phaser.Scene {
       fontSize: '16px', color: '#ffd700', fontFamily: 'monospace',
     }).setOrigin(0.5, 0).setDepth(10)
 
-    this.infoText = this.add.text(400, 580, '', {
-      fontSize: '12px', color: '#aaaaaa', fontFamily: 'monospace',
+    this.infoText = this.add.text(400, 660, '', {
+      fontSize: '13px', color: '#aaaaaa', fontFamily: 'monospace',
     }).setOrigin(0.5, 1).setDepth(10)
 
-    this.unitInfoText = this.add.text(400, 490, '', {
-      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace',
-      lineSpacing: 6, align: 'center',
+    this.unitInfoText = this.add.text(400, 484, '', {
+      fontSize: '15px', color: '#ffffff', fontFamily: 'monospace',
+      lineSpacing: 8, align: 'center',
     }).setOrigin(0.5, 0).setDepth(10)
 
-    this.btnConfirm = this.createButton(310, 565, 100, 28, '确认移动', 0x44aa44, () => this.onBtnConfirm())
-    this.btnCancel = this.createButton(430, 565, 100, 28, '取消移动', 0x666666, () => this.onBtnCancel())
-    this.btnSkipMove = this.createButton(190, 565, 100, 28, '不移动', 0x4488cc, () => this.onBtnSkipMove())
-    this.btnDeselect = this.createButton(70, 565, 100, 28, '取消选择', 0x666666, () => this.onBtnDeselect())
+    this.btnConfirm = this.createButton(310, 620, 100, 32, '确认移动', 0x44aa44, () => this.onBtnConfirm())
+    this.btnCancel = this.createButton(430, 620, 100, 32, '取消移动', 0x666666, () => this.onBtnCancel())
+    this.btnSkipMove = this.createButton(190, 620, 100, 32, '不移动', 0x4488cc, () => this.onBtnSkipMove())
+    this.btnDeselect = this.createButton(70, 620, 100, 32, '取消选择', 0x666666, () => this.onBtnDeselect())
     this.btnConfirm.setVisible(false)
     this.btnCancel.setVisible(false)
     this.btnSkipMove.setVisible(false)
