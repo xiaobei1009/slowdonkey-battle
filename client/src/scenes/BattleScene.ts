@@ -129,11 +129,16 @@ export class BattleScene extends Phaser.Scene {
           this.infoText.setText('选择移动目标位置')
         }
         break
-      case 'select_move':
-        if (this.selectionManager.onTileClicked(pos, this.allSprites)) {
+      case 'select_move': {
+        const sel = this.selectionManager.selectedUnit!
+        if (clicked?.unit.id === sel.unit.id) {
+          this.selectionManager.resetSelection()
+          this.infoText.setText('点击己方单位选择')
+        } else if (this.selectionManager.onTileClicked(pos, this.allSprites)) {
           this.showAttackRange()
         }
         break
+      }
       case 'select_target':
         if (clicked && clicked.unit.team === TEAM.ENEMY) {
           this.tryAttack(clicked)
