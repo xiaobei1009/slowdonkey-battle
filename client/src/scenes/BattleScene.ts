@@ -56,9 +56,13 @@ export class BattleScene extends Phaser.Scene {
 
   private selectedTarget: UnitSprite | null = null
   private preMovePos: Position | null = null
+  private intendedMovePos: Position | null = null
   private btnConfirm!: Phaser.GameObjects.Container
   private btnCancel!: Phaser.GameObjects.Container
+  private btnConfirmText!: Phaser.GameObjects.Text
+  private btnCancelText!: Phaser.GameObjects.Text
   private targetHighlight: Phaser.GameObjects.Rectangle | null = null
+  private movePreviewHighlight: Phaser.GameObjects.Rectangle | null = null
 
   constructor() {
     super({ key: 'BattleScene' })
@@ -95,10 +99,14 @@ export class BattleScene extends Phaser.Scene {
       fontSize: '12px', color: '#aaaaaa', fontFamily: 'monospace',
     }).setOrigin(0.5, 1).setDepth(10)
 
-    this.btnConfirm = this.createButton(310, 565, 80, 28, '攻击', 0x44aa44, () => this.onConfirm())
-    this.btnCancel = this.createButton(410, 565, 80, 28, '取消', 0x666666, () => this.onCancel())
+    this.btnConfirm = this.createButton(310, 565, 100, 28, '确认移动', 0x44aa44, () => this.onConfirmMove())
+    this.btnCancel = this.createButton(430, 565, 100, 28, '取消移动', 0x666666, () => this.onCancelMove())
     this.btnConfirm.setVisible(false)
     this.btnCancel.setVisible(false)
+    const cText = this.btnConfirm.getAt(1) as Phaser.GameObjects.Text
+    const caText = this.btnCancel.getAt(1) as Phaser.GameObjects.Text
+    this.btnConfirmText = cText
+    this.btnCancelText = caText
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onPointerDown(pointer))
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer))
@@ -143,13 +151,19 @@ export class BattleScene extends Phaser.Scene {
         break
       case 'select_move': {
         const sel = this.selectionManager.selectedUnit!
+        const isReachable = this.selectionManager.reachableTiles.some(t => t.col === pos.col && t.row === pos.row)
+
         if (clicked?.unit.id === sel.unit.id) {
+          this.cancelMovePreview()
           this.enemySprites.forEach(e => e.highlightAsTarget(false))
           this.selectionManager.resetSelection()
           this.infoText.setText('点击己方单位选择')
-        } else if (this.selectionManager.onTileClicked(pos, this.allSprites)) {
-          this.preMovePos = { ...sel.pos }
-          this.showAttackRange()
+        } else if (isReachable && !this.allSprites.some(s => s.pos.col === pos.col && s.pos.row === pos.row && s.unit.hp > 0 && s !== sel)) {
+          this.intendedMovePos = { ...pos }
+          this.showMovePreview(pos)
+          this.showMoveButtons()
+          this.infoText.setText('确认移动位置')
+        } else if (this.intendedMovePos && clicked?.unit.team === TEAM.ENEMY) {
         }
         break
       }
@@ -165,12 +179,14 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private handleRightClick(): void {
-    if (this.selectionManager.phase === 'select_move') {
+    if (this.intendedMovePos) {
+      this.onCancelMove()
+    } else if (this.selectionManager.phase === 'select_move') {
       this.enemySprites.forEach(e => e.highlightAsTarget(false))
       this.selectionManager.resetSelection()
       this.infoText.setText('点击己方单位选择')
     } else if (this.selectionManager.phase === 'select_target') {
-      this.onCancel()
+      this.onCancelAttack()
     }
   }
 
@@ -213,7 +229,7 @@ export class BattleScene extends Phaser.Scene {
     )
     if (attackable.length > 0) {
       this.infoText.setText('点击敌方选择目标，然后按「攻击」确认')
-      this.showActionButtons()
+      this.showAttackButtons()
     } else {
       this.infoText.setText('无攻击目标，自动待命')
       this.executeWait(selected)
@@ -402,7 +418,49 @@ export class BattleScene extends Phaser.Scene {
     return c
   }
 
-  private onConfirm(): void {
+  private showMovePreview(pos: Position): void {
+    if (this.movePreviewHighlight) this.movePreviewHighlight.destroy()
+    const pixelPos = this.mapManager.tileToPixel(pos)
+    this.movePreviewHighlight = this.add.rectangle(
+      pixelPos.x, pixelPos.y,
+      GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE,
+      0xffff00, 0.3
+    ).setStrokeStyle(2, 0xffff00, 0.8).setDepth(5)
+  }
+
+  private cancelMovePreview(): void {
+    this.intendedMovePos = null
+    if (this.movePreviewHighlight) {
+      this.movePreviewHighlight.destroy()
+      this.movePreviewHighlight = null
+    }
+  }
+
+  private onConfirmMove(): void {
+    const unit = this.selectionManager.selectedUnit
+    if (!unit || !this.intendedMovePos) return
+    this.preMovePos = { ...unit.pos }
+    this.cancelMovePreview()
+    this.hideActionButtons()
+    unit.setPosition(this.intendedMovePos, this.mapManager)
+    this.selectionManager.phase = 'select_target'
+    this.showAttackRange()
+  }
+
+  private onCancelMove(): void {
+    this.cancelMovePreview()
+    this.hideActionButtons()
+    const unit = this.selectionManager.selectedUnit
+    if (unit) {
+      this.selectionManager.showMoveRange(
+        this.mapManager.getReachableTiles(unit.pos, unit.unit.moveRange, this.occupiedPositions)
+      )
+      this.showAttackRangeTiles(unit.pos, unit.unit.attackRange)
+    }
+    this.infoText.setText('选择移动目标位置')
+  }
+
+  private onConfirmAttack(): void {
     if (!this.selectedTarget) return
     this.preMovePos = null
     this.hideActionButtons()
@@ -410,7 +468,7 @@ export class BattleScene extends Phaser.Scene {
     this.selectedTarget = null
   }
 
-  private onCancel(): void {
+  private onCancelAttack(): void {
     const unit = this.selectionManager.selectedUnit
     if (!unit || !this.preMovePos) return
     this.selectedTarget = null
@@ -425,6 +483,32 @@ export class BattleScene extends Phaser.Scene {
     this.infoText.setText('选择移动目标位置')
   }
 
+  private showMoveButtons(): void {
+    this.btnConfirmText.setText('确认移动')
+    this.btnCancelText.setText('取消移动')
+    this.btnConfirm.removeAllListeners('pointerdown')
+    this.btnCancel.removeAllListeners('pointerdown')
+    this.btnConfirm.getAt(0).on('pointerdown', () => this.onConfirmMove())
+    this.btnCancel.getAt(0).on('pointerdown', () => this.onCancelMove())
+    this.btnConfirm.setVisible(true)
+    this.btnCancel.setVisible(true)
+    this.btnConfirm.setDepth(20)
+    this.btnCancel.setDepth(20)
+  }
+
+  private showAttackButtons(): void {
+    this.btnConfirmText.setText('攻击')
+    this.btnCancelText.setText('取消')
+    this.btnConfirm.removeAllListeners('pointerdown')
+    this.btnCancel.removeAllListeners('pointerdown')
+    this.btnConfirm.getAt(0).on('pointerdown', () => this.onConfirmAttack())
+    this.btnCancel.getAt(0).on('pointerdown', () => this.onCancelAttack())
+    this.btnConfirm.setVisible(true)
+    this.btnCancel.setVisible(true)
+    this.btnConfirm.setDepth(20)
+    this.btnCancel.setDepth(20)
+  }
+
   private hideActionButtons(): void {
     this.btnConfirm.setVisible(false)
     this.btnCancel.setVisible(false)
@@ -432,13 +516,6 @@ export class BattleScene extends Phaser.Scene {
       this.targetHighlight.destroy()
       this.targetHighlight = null
     }
-  }
-
-  private showActionButtons(): void {
-    this.btnConfirm.setVisible(true)
-    this.btnCancel.setVisible(true)
-    this.btnConfirm.setDepth(20)
-    this.btnCancel.setDepth(20)
   }
 
   private highlightTarget(sprite: UnitSprite): void {

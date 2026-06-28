@@ -70,22 +70,6 @@ export class SelectionManager {
     }
   }
 
-  onTileClicked(pos: Position, unitSprites: UnitSprite[]): boolean {
-    if (this.phase === 'select_move') {
-      const isReachable = this.reachableTiles.some(t => t.col === pos.col && t.row === pos.row)
-      if (!isReachable) return false
-
-      const unitAtTile = unitSprites.find(u => u.pos.col === pos.col && u.pos.row === pos.row && u.unit.hp > 0 && u !== this.selectedUnit)
-      if (unitAtTile) return false
-
-      this.selectedUnit!.setPosition(pos, this.mapManager)
-      this.clearHighlights()
-      this.phase = 'select_target'
-      return true
-    }
-    return false
-  }
-
   resetSelection(): void {
     this.clearHighlights()
     if (this.selectedUnit) {
