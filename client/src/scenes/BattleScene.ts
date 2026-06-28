@@ -126,12 +126,14 @@ export class BattleScene extends Phaser.Scene {
       case 'idle':
         if (clicked && clicked.unit.team === TEAM.PLAYER) {
           this.selectionManager.onUnitClicked(clicked, this.occupiedPositions)
+          this.showAttackRangeTiles(clicked.pos, clicked.unit.attackRange)
           this.infoText.setText('选择移动目标位置')
         }
         break
       case 'select_move': {
         const sel = this.selectionManager.selectedUnit!
         if (clicked?.unit.id === sel.unit.id) {
+          this.enemySprites.forEach(e => e.highlightAsTarget(false))
           this.selectionManager.resetSelection()
           this.infoText.setText('点击己方单位选择')
         } else if (this.selectionManager.onTileClicked(pos, this.allSprites)) {
@@ -149,6 +151,7 @@ export class BattleScene extends Phaser.Scene {
 
   private handleRightClick(): void {
     if (this.selectionManager.phase === 'select_move') {
+      this.enemySprites.forEach(e => e.highlightAsTarget(false))
       this.selectionManager.resetSelection()
       this.infoText.setText('点击己方单位选择')
     } else if (this.selectionManager.phase === 'select_target') {
@@ -156,17 +159,13 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private showAttackRange(): void {
-    const selected = this.selectionManager.selectedUnit!
-    const pos = selected.pos
+  private showAttackRangeTiles(pos: Position, range: number): void {
     const enemies = this.enemySprites.filter(e => e.unit.hp > 0)
     const attackable = this.battleSystem.getAttackableTargets(
-      pos, selected.unit.attackRange,
+      pos, range,
       enemies.map(e => ({ unit: e.unit, pos: e.pos }))
     )
-
     this.enemySprites.forEach(e => e.highlightAsTarget(false))
-
     if (attackable.length > 0) {
       this.selectionManager.showAttackRange(attackable.map(a => a.pos))
       enemies.forEach(e => {
@@ -174,6 +173,19 @@ export class BattleScene extends Phaser.Scene {
           e.highlightAsTarget(true)
         }
       })
+    }
+  }
+
+  private showAttackRange(): void {
+    const selected = this.selectionManager.selectedUnit!
+    this.showAttackRangeTiles(selected.pos, selected.unit.attackRange)
+
+    const enemies = this.enemySprites.filter(e => e.unit.hp > 0)
+    const attackable = this.battleSystem.getAttackableTargets(
+      selected.pos, selected.unit.attackRange,
+      enemies.map(e => ({ unit: e.unit, pos: e.pos }))
+    )
+    if (attackable.length > 0) {
       this.infoText.setText('选择攻击目标 | 右键跳过')
     } else {
       this.infoText.setText('无攻击目标，自动待命')
