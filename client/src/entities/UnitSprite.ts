@@ -29,18 +29,18 @@ export class UnitSprite {
     this.sprite = scene.add.rectangle(pixelPos.x, pixelPos.y, size, size, color)
     this.sprite.setStrokeStyle(2, 0xffffff, 0.5)
 
-    this.nameText = scene.add.text(pixelPos.x, pixelPos.y - size / 2 - 8, unit.name, {
+    const barWidth = size + 4
+    const barHeight = 4
+    const barY = pixelPos.y - size / 2 - 4
+
+    this.hpBarBg = scene.add.rectangle(pixelPos.x, barY, barWidth, barHeight, 0x333333)
+    this.hpBar = scene.add.rectangle(pixelPos.x - barWidth / 2 * (1 - unit.hp / unit.maxHp), barY, barWidth * (unit.hp / unit.maxHp), barHeight, 0x44ff44)
+
+    this.nameText = scene.add.text(pixelPos.x, pixelPos.y + size / 2 + 8, unit.name, {
       fontSize: '10px',
       color: '#ffffff',
       fontFamily: 'monospace',
     }).setOrigin(0.5)
-
-    const barWidth = size + 4
-    const barHeight = 4
-    const barY = pixelPos.y + size / 2 + 4
-
-    this.hpBarBg = scene.add.rectangle(pixelPos.x, barY, barWidth, barHeight, 0x333333)
-    this.hpBar = scene.add.rectangle(pixelPos.x - barWidth / 2 * (1 - unit.hp / unit.maxHp), barY, barWidth * (unit.hp / unit.maxHp), barHeight, 0x44ff44)
 
     this.container = scene.add.container(0, 0, [
       this.selectedIndicator,
@@ -57,15 +57,16 @@ export class UnitSprite {
     const size = GAME_CONFIG.TILE_SIZE - 4
 
     this.sprite.setPosition(pixelPos.x, pixelPos.y)
-    this.nameText.setPosition(pixelPos.x, pixelPos.y - size / 2 - 8)
     this.selectedIndicator.setPosition(pixelPos.x, pixelPos.y)
 
     const barWidth = size + 4
     const barHeight = 4
-    const barY = pixelPos.y + size / 2 + 4
+    const barY = pixelPos.y - size / 2 - 4
     this.hpBarBg.setPosition(pixelPos.x, barY)
     this.hpBar.setPosition(pixelPos.x - barWidth / 2 * (1 - this.unit.hp / this.unit.maxHp), barY)
     this.hpBar.setSize(barWidth * (this.unit.hp / this.unit.maxHp), barHeight)
+
+    this.nameText.setPosition(pixelPos.x, pixelPos.y + size / 2 + 8)
   }
 
   updateHp(): void {
