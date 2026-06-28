@@ -54,6 +54,11 @@ export class BattleScene extends Phaser.Scene {
   private isExecuting = false
   private occupiedPositions: Position[] = []
 
+  private selectedTarget: UnitSprite | null = null
+  private btnConfirm!: Phaser.GameObjects.Container
+  private btnCancel!: Phaser.GameObjects.Container
+  private targetHighlight: Phaser.GameObjects.Rectangle | null = null
+
   constructor() {
     super({ key: 'BattleScene' })
   }
@@ -88,6 +93,11 @@ export class BattleScene extends Phaser.Scene {
     this.infoText = this.add.text(400, 580, '', {
       fontSize: '12px', color: '#aaaaaa', fontFamily: 'monospace',
     }).setOrigin(0.5, 1).setDepth(10)
+
+    this.btnConfirm = this.createButton(310, 565, 80, 28, '攻击', 0x44aa44, () => this.onConfirm())
+    this.btnCancel = this.createButton(410, 565, 80, 28, '取消', 0x666666, () => this.onCancel())
+    this.btnConfirm.setVisible(false)
+    this.btnCancel.setVisible(false)
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onPointerDown(pointer))
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer))
@@ -143,7 +153,10 @@ export class BattleScene extends Phaser.Scene {
       }
       case 'select_target':
         if (clicked && clicked.unit.team === TEAM.ENEMY) {
-          this.tryAttack(clicked)
+          if (this.isTargetable(clicked)) {
+            this.selectedTarget = clicked
+            this.highlightTarget(clicked)
+          }
         }
         break
     }
@@ -155,7 +168,7 @@ export class BattleScene extends Phaser.Scene {
       this.selectionManager.resetSelection()
       this.infoText.setText('点击己方单位选择')
     } else if (this.selectionManager.phase === 'select_target') {
-      this.executeWait(this.selectionManager.selectedUnit!)
+      this.onCancel()
     }
   }
 
@@ -186,25 +199,23 @@ export class BattleScene extends Phaser.Scene {
       enemies.map(e => ({ unit: e.unit, pos: e.pos }))
     )
     if (attackable.length > 0) {
-      this.infoText.setText('选择攻击目标 | 右键跳过')
+      this.infoText.setText('点击敌方选择目标，然后按「攻击」确认')
+      this.showActionButtons()
     } else {
       this.infoText.setText('无攻击目标，自动待命')
       this.executeWait(selected)
     }
   }
 
-  private tryAttack(targetSprite: UnitSprite): void {
-    const attacker = this.selectionManager.selectedUnit!
-    const isTargetable = this.selectionManager.attackableTiles.some(
-      t => t.col === targetSprite.pos.col && t.row === targetSprite.pos.row
+  private isTargetable(sprite: UnitSprite): boolean {
+    return this.selectionManager.attackableTiles.some(
+      t => t.col === sprite.pos.col && t.row === sprite.pos.row
     )
-    if (!isTargetable) return
-
-    this.executeAttack(attacker, targetSprite)
   }
 
   private async executeAttack(attacker: UnitSprite, defender: UnitSprite): Promise<void> {
     this.isExecuting = true
+    this.hideActionButtons()
     this.selectionManager.setCursorVisible(false)
 
     const isMagic = attacker.unit.matk > attacker.unit.attack
@@ -251,6 +262,7 @@ export class BattleScene extends Phaser.Scene {
 
   private async executeWait(unitSprite: UnitSprite): Promise<void> {
     this.isExecuting = true
+    this.hideActionButtons()
     this.turnManager.markActed(unitSprite.unit.id)
     this.enemySprites.forEach(e => e.highlightAsTarget(false))
     this.selectionManager.resetSelection()
@@ -363,6 +375,57 @@ export class BattleScene extends Phaser.Scene {
     this.occupiedPositions = this.allSprites
       .filter(s => s.unit.hp > 0)
       .map(s => ({ ...s.pos }))
+  }
+
+  private createButton(x: number, y: number, w: number, h: number, label: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
+    const bg = this.add.rectangle(x, y, w, h, color, 0.9).setStrokeStyle(1, 0xffffff, 0.5)
+    const text = this.add.text(x, y, label, {
+      fontSize: '12px', color: '#ffffff', fontFamily: 'monospace',
+    }).setOrigin(0.5)
+    bg.setInteractive({ useHandCursor: true })
+    bg.on('pointerdown', onClick)
+    const c = this.add.container(0, 0, [bg, text])
+    c.setDepth(20)
+    return c
+  }
+
+  private onConfirm(): void {
+    if (!this.selectedTarget) return
+    this.hideActionButtons()
+    this.executeAttack(this.selectionManager.selectedUnit!, this.selectedTarget)
+    this.selectedTarget = null
+  }
+
+  private onCancel(): void {
+    this.selectedTarget = null
+    this.hideActionButtons()
+    this.executeWait(this.selectionManager.selectedUnit!)
+  }
+
+  private hideActionButtons(): void {
+    this.btnConfirm.setVisible(false)
+    this.btnCancel.setVisible(false)
+    if (this.targetHighlight) {
+      this.targetHighlight.destroy()
+      this.targetHighlight = null
+    }
+  }
+
+  private showActionButtons(): void {
+    this.btnConfirm.setVisible(true)
+    this.btnCancel.setVisible(true)
+    this.btnConfirm.setDepth(20)
+    this.btnCancel.setDepth(20)
+  }
+
+  private highlightTarget(sprite: UnitSprite): void {
+    if (this.targetHighlight) this.targetHighlight.destroy()
+    const pixelPos = this.mapManager.tileToPixel(sprite.pos)
+    this.targetHighlight = this.add.rectangle(
+      pixelPos.x, pixelPos.y,
+      GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE,
+      0xffff00, 0.35
+    ).setStrokeStyle(2, 0xffff00, 0.9).setDepth(5)
   }
 
   private delay(ms: number): Promise<void> {
