@@ -75,7 +75,7 @@ export class SelectionManager {
       const isReachable = this.reachableTiles.some(t => t.col === pos.col && t.row === pos.row)
       if (!isReachable) return false
 
-      const unitAtTile = unitSprites.find(u => u.pos.col === pos.col && u.pos.row === pos.row && u.unit.team === TEAM.PLAYER && u !== this.selectedUnit)
+      const unitAtTile = unitSprites.find(u => u.pos.col === pos.col && u.pos.row === pos.row && u.unit.hp > 0 && u !== this.selectedUnit)
       if (unitAtTile) return false
 
       this.selectedUnit!.setPosition(pos, this.mapManager)
