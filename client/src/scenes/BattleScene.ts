@@ -99,14 +99,12 @@ export class BattleScene extends Phaser.Scene {
       fontSize: '12px', color: '#aaaaaa', fontFamily: 'monospace',
     }).setOrigin(0.5, 1).setDepth(10)
 
-    this.btnConfirm = this.createButton(310, 565, 100, 28, '确认移动', 0x44aa44, () => this.onConfirmMove())
-    this.btnCancel = this.createButton(430, 565, 100, 28, '取消移动', 0x666666, () => this.onCancelMove())
+    this.btnConfirm = this.createButton(310, 565, 100, 28, '确认移动', 0x44aa44, () => this.onBtnConfirm())
+    this.btnCancel = this.createButton(430, 565, 100, 28, '取消移动', 0x666666, () => this.onBtnCancel())
     this.btnConfirm.setVisible(false)
     this.btnCancel.setVisible(false)
-    const cText = this.btnConfirm.getAt(1) as Phaser.GameObjects.Text
-    const caText = this.btnCancel.getAt(1) as Phaser.GameObjects.Text
-    this.btnConfirmText = cText
-    this.btnCancelText = caText
+    this.btnConfirmText = this.btnConfirm.getAt(1) as Phaser.GameObjects.Text
+    this.btnCancelText = this.btnCancel.getAt(1) as Phaser.GameObjects.Text
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => this.onPointerDown(pointer))
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => this.onPointerMove(pointer))
@@ -193,14 +191,12 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private handleRightClick(): void {
-    if (this.intendedMovePos) {
-      this.onCancelMove()
+    if (this.intendedMovePos || this.preMovePos) {
+      this.onBtnCancel()
     } else if (this.selectionManager.phase === 'select_move') {
       this.enemySprites.forEach(e => e.highlightAsTarget(false))
       this.selectionManager.resetSelection()
       this.infoText.setText('点击己方单位选择')
-    } else if (this.selectionManager.phase === 'select_target') {
-      this.onCancelAttack()
     }
   }
 
@@ -450,60 +446,55 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
-  private onConfirmMove(): void {
-    const unit = this.selectionManager.selectedUnit
-    if (!unit || !this.intendedMovePos) return
-    this.preMovePos = { ...unit.pos }
-    this.cancelMovePreview()
-    this.hideActionButtons()
-    unit.setPosition(this.intendedMovePos, this.mapManager)
-    this.selectionManager.phase = 'select_target'
-    this.showAttackRange()
-  }
-
-  private onCancelMove(): void {
-    this.cancelMovePreview()
-    this.hideActionButtons()
-    const unit = this.selectionManager.selectedUnit
-    if (unit) {
-      this.selectionManager.showMoveRange(
-        this.mapManager.getReachableTiles(unit.pos, unit.unit.moveRange, this.occupiedPositions)
-      )
-      this.showAttackRangeTiles(unit.pos, unit.unit.attackRange)
+  private onBtnConfirm(): void {
+    if (this.intendedMovePos) {
+      const unit = this.selectionManager.selectedUnit
+      if (!unit) return
+      this.preMovePos = { ...unit.pos }
+      this.cancelMovePreview()
+      this.hideActionButtons()
+      unit.setPosition(this.intendedMovePos, this.mapManager)
+      this.selectionManager.phase = 'select_target'
+      this.showAttackRange()
+    } else if (this.selectedTarget) {
+      this.preMovePos = null
+      this.hideActionButtons()
+      this.executeAttack(this.selectionManager.selectedUnit!, this.selectedTarget)
+      this.selectedTarget = null
     }
-    this.infoText.setText('选择移动目标位置')
   }
 
-  private onConfirmAttack(): void {
-    if (!this.selectedTarget) return
-    this.preMovePos = null
-    this.hideActionButtons()
-    this.executeAttack(this.selectionManager.selectedUnit!, this.selectedTarget)
-    this.selectedTarget = null
-  }
-
-  private onCancelAttack(): void {
-    const unit = this.selectionManager.selectedUnit
-    if (!unit || !this.preMovePos) return
-    this.selectedTarget = null
-    this.hideActionButtons()
-    this.enemySprites.forEach(e => e.highlightAsTarget(false))
-    unit.setPosition(this.preMovePos, this.mapManager)
-    this.preMovePos = null
-    this.selectionManager.phase = 'select_move'
-    const reachable = this.mapManager.getReachableTiles(unit.pos, unit.unit.moveRange, this.occupiedPositions)
-    this.selectionManager.showMoveRange(reachable)
-    this.showAttackRangeTiles(unit.pos, unit.unit.attackRange)
-    this.infoText.setText('选择移动目标位置')
+  private onBtnCancel(): void {
+    if (this.intendedMovePos) {
+      this.cancelMovePreview()
+      this.hideActionButtons()
+      const unit = this.selectionManager.selectedUnit
+      if (unit) {
+        this.selectionManager.showMoveRange(
+          this.mapManager.getReachableTiles(unit.pos, unit.unit.moveRange, this.occupiedPositions)
+        )
+        this.showAttackRangeTiles(unit.pos, unit.unit.attackRange)
+      }
+      this.infoText.setText('选择移动目标位置')
+    } else if (this.preMovePos) {
+      const unit = this.selectionManager.selectedUnit
+      if (!unit || !this.preMovePos) return
+      this.selectedTarget = null
+      this.hideActionButtons()
+      this.enemySprites.forEach(e => e.highlightAsTarget(false))
+      unit.setPosition(this.preMovePos, this.mapManager)
+      this.preMovePos = null
+      this.selectionManager.phase = 'select_move'
+      const reachable = this.mapManager.getReachableTiles(unit.pos, unit.unit.moveRange, this.occupiedPositions)
+      this.selectionManager.showMoveRange(reachable)
+      this.showAttackRangeTiles(unit.pos, unit.unit.attackRange)
+      this.infoText.setText('选择移动目标位置')
+    }
   }
 
   private showMoveButtons(): void {
     this.btnConfirmText.setText('确认移动')
     this.btnCancelText.setText('取消移动')
-    this.btnConfirm.removeAllListeners('pointerdown')
-    this.btnCancel.removeAllListeners('pointerdown')
-    this.btnConfirm.getAt(0).on('pointerdown', () => this.onConfirmMove())
-    this.btnCancel.getAt(0).on('pointerdown', () => this.onCancelMove())
     this.btnConfirm.setVisible(true)
     this.btnCancel.setVisible(true)
     this.btnConfirm.setDepth(20)
@@ -513,10 +504,6 @@ export class BattleScene extends Phaser.Scene {
   private showAttackButtons(): void {
     this.btnConfirmText.setText('攻击')
     this.btnCancelText.setText('取消')
-    this.btnConfirm.removeAllListeners('pointerdown')
-    this.btnCancel.removeAllListeners('pointerdown')
-    this.btnConfirm.getAt(0).on('pointerdown', () => this.onConfirmAttack())
-    this.btnCancel.getAt(0).on('pointerdown', () => this.onCancelAttack())
     this.btnConfirm.setVisible(true)
     this.btnCancel.setVisible(true)
     this.btnConfirm.setDepth(20)
