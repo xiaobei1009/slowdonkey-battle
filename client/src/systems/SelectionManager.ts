@@ -9,9 +9,9 @@ export type SelectionPhase = 'idle' | 'select_unit' | 'select_move' | 'select_ta
 export class SelectionManager {
   private scene: Phaser.Scene
   private mapManager: MapManager
-  private moveHighlights: Phaser.GameObjects.Rectangle[] = []
-  private attackHighlights: Phaser.GameObjects.Rectangle[] = []
-  private cursor: Phaser.GameObjects.Rectangle
+  private moveHighlights: Phaser.GameObjects.Polygon[] = []
+  private attackHighlights: Phaser.GameObjects.Polygon[] = []
+  private cursor: Phaser.GameObjects.Polygon
   cursorPos: Position = { col: 0, row: 0 }
   phase: SelectionPhase = 'idle'
   selectedUnit: UnitSprite | null = null
@@ -21,8 +21,13 @@ export class SelectionManager {
   constructor(scene: Phaser.Scene, mapManager: MapManager) {
     this.scene = scene
     this.mapManager = mapManager
-    this.cursor = scene.add.rectangle(0, 0, GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE, 0xffffff, 0.2)
-    this.cursor.setStrokeStyle(2, 0xffffff, 0.8)
+    this.cursor = scene.add.polygon(0, 0, [
+      0, -GAME_CONFIG.ISO_TILE_H / 2,
+      GAME_CONFIG.ISO_TILE_W / 2, 0,
+      0, GAME_CONFIG.ISO_TILE_H / 2,
+      -GAME_CONFIG.ISO_TILE_W / 2, 0,
+    ], 0xffffff, 0.15)
+    this.cursor.setStrokeStyle(1, 0xffffff, 0.8)
     this.updateCursorPosition({ col: 0, row: 0 })
   }
 
@@ -42,11 +47,13 @@ export class SelectionManager {
   showMoveRange(tiles: Position[]): void {
     this.clearHighlights()
     this.reachableTiles = tiles
+    const halfW = GAME_CONFIG.ISO_TILE_W / 2
+    const halfH = GAME_CONFIG.ISO_TILE_H / 2
     for (const tile of tiles) {
       const pixelPos = this.mapManager.tileToPixel(tile)
-      const rect = this.scene.add.rectangle(pixelPos.x, pixelPos.y, GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE, 0x4488ff, 0.25)
-      rect.setStrokeStyle(1, 0x4488ff, 0.5)
-      this.moveHighlights.push(rect)
+      const p = this.scene.add.polygon(pixelPos.x, pixelPos.y, [0, -halfH, halfW, 0, 0, halfH, -halfW, 0], 0x4488ff, 0.25)
+      p.setStrokeStyle(1, 0x4488ff, 0.5)
+      this.moveHighlights.push(p)
     }
   }
 
@@ -58,11 +65,13 @@ export class SelectionManager {
 
   showAttackRange(tiles: Position[]): void {
     this.attackableTiles = tiles
+    const halfW = GAME_CONFIG.ISO_TILE_W / 2
+    const halfH = GAME_CONFIG.ISO_TILE_H / 2
     for (const tile of tiles) {
       const pixelPos = this.mapManager.tileToPixel(tile)
-      const rect = this.scene.add.rectangle(pixelPos.x, pixelPos.y, GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE, 0xff4444, 0.25)
-      rect.setStrokeStyle(1, 0xff4444, 0.5)
-      this.attackHighlights.push(rect)
+      const p = this.scene.add.polygon(pixelPos.x, pixelPos.y, [0, -halfH, halfW, 0, 0, halfH, -halfW, 0], 0xff4444, 0.25)
+      p.setStrokeStyle(1, 0xff4444, 0.5)
+      this.attackHighlights.push(p)
     }
   }
 

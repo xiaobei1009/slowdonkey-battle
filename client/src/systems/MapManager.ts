@@ -6,6 +6,8 @@ export class MapManager {
   private scene: Phaser.Scene
   private tileSprites: Phaser.GameObjects.Graphics
   tiles: TileData[][] = []
+  private halfW = GAME_CONFIG.ISO_TILE_W / 2
+  private halfH = GAME_CONFIG.ISO_TILE_H / 2
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene
@@ -30,40 +32,61 @@ export class MapManager {
     }
   }
 
+  private isoToScreen(col: number, row: number): { x: number; y: number } {
+    return {
+      x: (col - row) * this.halfW + GAME_CONFIG.MAP_OFFSET_X,
+      y: (col + row) * this.halfH + GAME_CONFIG.MAP_OFFSET_Y,
+    }
+  }
+
+  private drawDiamond(g: Phaser.GameObjects.Graphics, cx: number, cy: number, fill: number, shade: number): void {
+    const t = { x: cx, y: cy - this.halfH }
+    const r = { x: cx + this.halfW, y: cy }
+    const b = { x: cx, y: cy + this.halfH }
+    const l = { x: cx - this.halfW, y: cy }
+
+    g.fillStyle(fill, 1)
+    g.fillPoints([new Phaser.Math.Vector2(t.x, t.y), new Phaser.Math.Vector2(r.x, r.y), new Phaser.Math.Vector2(b.x, b.y), new Phaser.Math.Vector2(l.x, l.y)], true)
+
+    g.lineStyle(1, 0x000000, 0.3)
+    g.strokePoints([new Phaser.Math.Vector2(t.x, t.y), new Phaser.Math.Vector2(r.x, r.y), new Phaser.Math.Vector2(b.x, b.y), new Phaser.Math.Vector2(l.x, l.y)], true)
+
+    g.fillStyle(shade, 0.5)
+    g.fillPoints([new Phaser.Math.Vector2(r.x, r.y), new Phaser.Math.Vector2(b.x, b.y), new Phaser.Math.Vector2(cx, cy)], true)
+
+    g.fillStyle(fill, 0.3)
+    g.fillPoints([new Phaser.Math.Vector2(l.x, l.y), new Phaser.Math.Vector2(t.x, t.y), new Phaser.Math.Vector2(cx, cy)], true)
+  }
+
   render(): void {
     const g = this.tileSprites
     g.clear()
+    const depthOrder: { col: number; row: number }[] = []
     for (let row = 0; row < GAME_CONFIG.MAP_ROWS; row++) {
       for (let col = 0; col < GAME_CONFIG.MAP_COLS; col++) {
-        const tile = this.tiles[row][col]
-        const x = col * GAME_CONFIG.TILE_SIZE
-        const y = row * GAME_CONFIG.TILE_SIZE
-        const color = TERRAIN_COLORS[tile.terrain].fill
-
-        g.fillStyle(color, 1)
-        g.fillRect(x, y, GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE)
-
-        g.lineStyle(1, 0x000000, 0.15)
-        g.strokeRect(x, y, GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE)
-        g.lineStyle(2, 0x000000, 0.08)
-        g.lineBetween(x + 2, y + GAME_CONFIG.TILE_SIZE - 1, x + GAME_CONFIG.TILE_SIZE - 2, y + GAME_CONFIG.TILE_SIZE - 1)
-        g.lineBetween(x + GAME_CONFIG.TILE_SIZE - 1, y + 2, x + GAME_CONFIG.TILE_SIZE - 1, y + GAME_CONFIG.TILE_SIZE - 2)
+        depthOrder.push({ col, row })
       }
+    }
+    depthOrder.sort((a, b) => (a.col + a.row) - (b.col + b.row))
+
+    for (const p of depthOrder) {
+      const tile = this.tiles[p.row][p.col]
+      const pos = this.isoToScreen(p.col, p.row)
+      const info = TERRAIN_COLORS[tile.terrain]
+      this.drawDiamond(g, pos.x, pos.y, info.fill, info.shade)
     }
   }
 
   tileToPixel(pos: Position): { x: number; y: number } {
-    return {
-      x: pos.col * GAME_CONFIG.TILE_SIZE + GAME_CONFIG.TILE_SIZE / 2,
-      y: pos.row * GAME_CONFIG.TILE_SIZE + GAME_CONFIG.TILE_SIZE / 2,
-    }
+    return this.isoToScreen(pos.col, pos.row)
   }
 
   pixelToTile(x: number, y: number): Position {
-    return {
-      col: Math.floor(x / GAME_CONFIG.TILE_SIZE),
-      row: Math.floor(y / GAME_CONFIG.TILE_SIZE),
-    }
+    const relX = x - GAME_CONFIG.MAP_OFFSET_X
+    const relY = y - GAME_CONFIG.MAP_OFFSET_Y
+    const col = (relX / this.halfW + relY / this.halfH) / 2
+    const row = (relY / this.halfH - relX / this.halfW) / 2
+    return { col: Math.round(col), row: Math.round(row) }
   }
 
   isWalkable(pos: Position): boolean {

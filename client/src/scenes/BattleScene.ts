@@ -63,8 +63,8 @@ export class BattleScene extends Phaser.Scene {
   private btnDeselect!: Phaser.GameObjects.Container
   private btnConfirmText!: Phaser.GameObjects.Text
   private btnCancelText!: Phaser.GameObjects.Text
-  private targetHighlight: Phaser.GameObjects.Rectangle | null = null
-  private movePreviewHighlight: Phaser.GameObjects.Rectangle | null = null
+  private targetHighlight: Phaser.GameObjects.Polygon | null = null
+  private movePreviewHighlight: Phaser.GameObjects.Polygon | null = null
   private unitInfoText!: Phaser.GameObjects.Text
   private logEl!: HTMLDivElement
 
@@ -506,9 +506,11 @@ export class BattleScene extends Phaser.Scene {
   private showMovePreview(pos: Position): void {
     if (this.movePreviewHighlight) this.movePreviewHighlight.destroy()
     const pixelPos = this.mapManager.tileToPixel(pos)
-    this.movePreviewHighlight = this.add.rectangle(
+    const halfW = GAME_CONFIG.ISO_TILE_W / 2
+    const halfH = GAME_CONFIG.ISO_TILE_H / 2
+    this.movePreviewHighlight = this.add.polygon(
       pixelPos.x, pixelPos.y,
-      GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE,
+      [0, -halfH, halfW, 0, 0, halfH, -halfW, 0],
       0xffff00, 0.3
     ).setStrokeStyle(2, 0xffff00, 0.8).setDepth(5)
   }
@@ -648,9 +650,11 @@ export class BattleScene extends Phaser.Scene {
   private highlightTarget(sprite: UnitSprite): void {
     if (this.targetHighlight) this.targetHighlight.destroy()
     const pixelPos = this.mapManager.tileToPixel(sprite.pos)
-    this.targetHighlight = this.add.rectangle(
+    const halfW = GAME_CONFIG.ISO_TILE_W / 2
+    const halfH = GAME_CONFIG.ISO_TILE_H / 2
+    this.targetHighlight = this.add.polygon(
       pixelPos.x, pixelPos.y,
-      GAME_CONFIG.TILE_SIZE, GAME_CONFIG.TILE_SIZE,
+      [0, -halfH, halfW, 0, 0, halfH, -halfW, 0],
       0xffff00, 0.35
     ).setStrokeStyle(2, 0xffff00, 0.9).setDepth(5)
   }
