@@ -31,9 +31,9 @@ const playerStartPositions: Position[] = [
 ]
 
 const enemyStartPositions: Position[] = [
-  { col: 18, row: 4 },
-  { col: 17, row: 7 },
-  { col: 18, row: 10 },
+  { col: 23, row: 4 },
+  { col: 22, row: 7 },
+  { col: 23, row: 10 },
 ]
 
 export class BattleScene extends Phaser.Scene {
@@ -96,17 +96,17 @@ export class BattleScene extends Phaser.Scene {
     this.updateOccupied()
 
     this.turnText = this.add.text(400, 8, '', {
-      fontSize: '14px', color: '#ffd700', fontFamily: 'monospace',
+      fontSize: '16px', color: '#ffd700', fontFamily: 'monospace',
     }).setOrigin(0.5, 0).setDepth(10)
 
     this.infoText = this.add.text(400, 580, '', {
       fontSize: '12px', color: '#aaaaaa', fontFamily: 'monospace',
     }).setOrigin(0.5, 1).setDepth(10)
 
-    this.unitInfoText = this.add.text(648, 8, '', {
-      fontSize: '11px', color: '#ffffff', fontFamily: 'monospace',
-      lineSpacing: 4,
-    }).setDepth(10)
+    this.unitInfoText = this.add.text(400, 490, '', {
+      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace',
+      lineSpacing: 6, align: 'center',
+    }).setOrigin(0.5, 0).setDepth(10)
 
     this.btnConfirm = this.createButton(310, 565, 100, 28, '确认移动', 0x44aa44, () => this.onBtnConfirm())
     this.btnCancel = this.createButton(430, 565, 100, 28, '取消移动', 0x666666, () => this.onBtnCancel())
@@ -491,7 +491,7 @@ export class BattleScene extends Phaser.Scene {
   private createButton(x: number, y: number, w: number, h: number, label: string, color: number, onClick: () => void): Phaser.GameObjects.Container {
     const bg = this.add.rectangle(x, y, w, h, color, 0.9).setStrokeStyle(1, 0xffffff, 0.5)
     const text = this.add.text(x, y, label, {
-      fontSize: '12px', color: '#ffffff', fontFamily: 'monospace',
+      fontSize: '14px', color: '#ffffff', fontFamily: 'monospace',
     }).setOrigin(0.5)
     bg.setInteractive({ useHandCursor: true })
     bg.on('pointerdown', onClick)
@@ -664,17 +664,14 @@ export class BattleScene extends Phaser.Scene {
   private updateUnitInfo(sprite: UnitSprite | null): void {
     if (!sprite) { this.unitInfoText.setText(''); return }
     const u = sprite.unit
-    const team = u.team === TEAM.PLAYER ? '玩家' : '敌方'
-    const isMagic = u.matk > u.attack
+    const atk = u.matk > u.attack ? u.matk : u.attack
+    const def = u.matk > u.attack ? u.mdef : u.defense
+    const atkLabel = u.matk > u.attack ? '魔攻' : '攻击'
+    const defLabel = u.matk > u.attack ? '魔防' : '防御'
     this.unitInfoText.setText(
-      `${u.name} Lv.${u.level}\n` +
-      `阵营: ${team}\n` +
-      `HP: ${u.hp}/${u.maxHp}\n` +
-      `攻: ${isMagic ? u.matk : u.attack} 防: ${isMagic ? u.mdef : u.defense}\n` +
-      `速: ${u.speed}  射程: ${u.attackRange}\n` +
-      `移动: ${u.moveRange}\n` +
-      `命中: ${u.hitRate}% 闪避: ${u.dodgeRate}%\n` +
-      `暴击: ${u.critRate}%`
+      `${u.name} Lv.${u.level}  HP ${u.hp}/${u.maxHp}\n` +
+      `${atkLabel} ${atk}  ${defLabel} ${def}  速度 ${u.speed}  射程 ${u.attackRange}  移动 ${u.moveRange}\n` +
+      `命中 ${u.hitRate}%  闪避 ${u.dodgeRate}%  暴击 ${u.critRate}%`
     )
   }
 
