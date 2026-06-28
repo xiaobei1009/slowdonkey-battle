@@ -55,6 +55,7 @@ export class BattleScene extends Phaser.Scene {
   private occupiedPositions: Position[] = []
 
   private selectedTarget: UnitSprite | null = null
+  private preMovePos: Position | null = null
   private btnConfirm!: Phaser.GameObjects.Container
   private btnCancel!: Phaser.GameObjects.Container
   private targetHighlight: Phaser.GameObjects.Rectangle | null = null
@@ -147,6 +148,7 @@ export class BattleScene extends Phaser.Scene {
           this.selectionManager.resetSelection()
           this.infoText.setText('点击己方单位选择')
         } else if (this.selectionManager.onTileClicked(pos, this.allSprites)) {
+          this.preMovePos = { ...sel.pos }
           this.showAttackRange()
         }
         break
@@ -402,15 +404,25 @@ export class BattleScene extends Phaser.Scene {
 
   private onConfirm(): void {
     if (!this.selectedTarget) return
+    this.preMovePos = null
     this.hideActionButtons()
     this.executeAttack(this.selectionManager.selectedUnit!, this.selectedTarget)
     this.selectedTarget = null
   }
 
   private onCancel(): void {
+    const unit = this.selectionManager.selectedUnit
+    if (!unit || !this.preMovePos) return
     this.selectedTarget = null
     this.hideActionButtons()
-    this.executeWait(this.selectionManager.selectedUnit!)
+    this.enemySprites.forEach(e => e.highlightAsTarget(false))
+    unit.setPosition(this.preMovePos, this.mapManager)
+    this.preMovePos = null
+    this.selectionManager.phase = 'select_move'
+    const reachable = this.mapManager.getReachableTiles(unit.pos, unit.unit.moveRange, this.occupiedPositions)
+    this.selectionManager.showMoveRange(reachable)
+    this.showAttackRangeTiles(unit.pos, unit.unit.attackRange)
+    this.infoText.setText('选择移动目标位置')
   }
 
   private hideActionButtons(): void {
